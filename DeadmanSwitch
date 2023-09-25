@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract DeadmanSwitch {
+    address payable public owner;
+    address payable public beneficiary;
+    uint256 public lastCheckIn;
+    uint256 public checkInPeriod;
+    uint256 public balance;
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function.");
+        _;
+    }
+
+    constructor(uint256 _checkInPeriod, address payable _beneficiary) payable {
+        owner = payable(msg.sender);
+        beneficiary = _beneficiary;
+        checkInPeriod = _checkInPeriod;
+        lastCheckIn = block.timestamp;
+        balance = msg.value;
+    }
+
+    receive() external payable {
+        // Fallback function to accept incoming Ether
+        balance += msg.value;
+    }
+
+    function checkIn() public onlyOwner {
+        lastCheckIn = block.timestamp;
+    }
+
+    function withdraw() public onlyOwner {
+        owner.transfer(balance);
+        balance = 0;
+    }
+
+    function trigger() public {
+        require(block.timestamp > lastCheckIn + checkInPeriod, "Owner is still alive.");
+        if (beneficiary != address(0)) { // check if beneficiary address is valid
+            beneficiary.transfer(balance);
+            balance = 0;
+        }
+    }
+}
